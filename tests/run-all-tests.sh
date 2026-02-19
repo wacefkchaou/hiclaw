@@ -20,6 +20,7 @@ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 SKIP_BUILD=false
 USE_EXISTING=false
 TEST_FILTER=""
+INCLUDE_PROJECT_TEST=false
 MANAGER_CONTAINER="hiclaw-manager-test"
 HICLAW_VERSION="${HICLAW_VERSION:-latest}"
 
@@ -39,6 +40,7 @@ while [[ $# -gt 0 ]]; do
         --skip-build) SKIP_BUILD=true; shift ;;
         --use-existing) USE_EXISTING=true; SKIP_BUILD=true; shift ;;
         --test-filter) TEST_FILTER="$2"; shift 2 ;;
+        --include-project-test) INCLUDE_PROJECT_TEST=true; shift ;;
         *) echo "Unknown option: $1"; exit 1 ;;
     esac
 done
@@ -250,6 +252,24 @@ for test_file in "${TESTS[@]}"; do
 
     echo ""
 done
+
+# Optionally run the project collaboration test (long-running, opt-in only)
+if [ "${INCLUDE_PROJECT_TEST}" = true ]; then
+    log "Running: project-collaboration (long-running, may take up to 1 hour)"
+    PROJECT_TEST="${SCRIPT_DIR}/project-collaboration/run-test.sh"
+    if [ -f "${PROJECT_TEST}" ]; then
+        if bash "${PROJECT_TEST}" \
+            --timeout "${PROJECT_TEST_TIMEOUT:-3600}"; then
+            RESULTS+=("PASS: project-collaboration")
+            TOTAL_PASS=$((TOTAL_PASS + 1))
+        else
+            RESULTS+=("FAIL: project-collaboration")
+            TOTAL_FAIL=$((TOTAL_FAIL + 1))
+        fi
+    else
+        log "WARNING: project-collaboration test not found at ${PROJECT_TEST}"
+    fi
+fi
 
 # ============================================================
 # Step 5: Report results

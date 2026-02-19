@@ -32,6 +32,23 @@ Test Script                     HiClaw System
 | test-08 | Case 8 | GitHub operations via MCP Server |
 | test-09 | Case 9 | Multi-Worker GitHub collaboration |
 | test-10 | Case 10 | MCP permission dynamic revoke/restore |
+| project-collaboration | Feature | Multi-round git project: developer + reviewer + tester |
+
+## Project Collaboration Test
+
+The `project-collaboration/` directory contains a long-running end-to-end test for the project management skill. It is **opt-in** due to its long runtime (up to 1 hour).
+
+See `project-collaboration/README.md` for details.
+
+### Run the project collaboration test
+
+```bash
+# Standalone
+./tests/project-collaboration/run-test.sh
+
+# As part of run-all-tests.sh
+./tests/run-all-tests.sh --include-project-test
+```
 
 ## Running Tests
 

@@ -142,11 +142,11 @@ fi
 
 # ============================================================
 # 6. MCP Server: GitHub (if token provided)
+# ============================================================
+if [ -n "${HICLAW_GITHUB_TOKEN}" ]; then
     # First, create DNS service source for GitHub API
     higress_api POST /v1/service-sources "Creating GitHub API service source" \
         '{"type":"dns","name":"github-api","domain":"api.github.com","port":443,"protocol":"https"}'
-# ============================================================
-if [ -n "${HICLAW_GITHUB_TOKEN}" ]; then
     MCP_YAML_FILE="/opt/hiclaw/agent/skills/mcp-server-management/references/mcp-github.yaml"
     if [ -f "${MCP_YAML_FILE}" ]; then
         # Read YAML template and substitute the GitHub access token

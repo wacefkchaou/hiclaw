@@ -231,12 +231,12 @@ wait-ready:
 
 test: ## Run integration tests (installs Manager first unless SKIP_INSTALL=1)
 ifdef SKIP_INSTALL
-	@echo "==> Running tests against existing installation"
+	@echo "==> Running tests against existing installation (YOLO mode)"
+	@docker exec hiclaw-manager touch /root/manager-workspace/yolo-mode 2>/dev/null || true
 	./tests/run-all-tests.sh --skip-build --use-existing $(if $(TEST_FILTER),--test-filter "$(TEST_FILTER)") $(if $(INCLUDE_PROJECT_TEST),--include-project-test)
 else
-	@echo "==> Installing Manager and running tests"
-	$(MAKE) uninstall 2>/dev/null || true
-	$(MAKE) install
+	@echo "==> Installing Manager and running tests (YOLO mode)"
+	HICLAW_YOLO=1 $(MAKE) install
 	$(MAKE) wait-ready
 	./tests/run-all-tests.sh --skip-build --use-existing $(if $(TEST_FILTER),--test-filter "$(TEST_FILTER)") $(if $(INCLUDE_PROJECT_TEST),--include-project-test)
 endif
@@ -275,10 +275,21 @@ uninstall: ## Stop and remove Manager + all Worker containers
 		fi; \
 		WORKSPACE_DIR=$$(grep '^HICLAW_WORKSPACE_DIR=' ./hiclaw-manager.env 2>/dev/null | cut -d= -f2-); \
 		if [ -n "$$WORKSPACE_DIR" ] && [ -d "$$WORKSPACE_DIR" ]; then \
-		        PARENT=$$(dirname "$$WORKSPACE_DIR"); \
-			BASE=$$(basename "$$WORKSPACE_DIR"); \
-			docker run --rm --entrypoint sh -v "$$PARENT:/host-parent" $(LOCAL_MANAGER) -c "rm -rf /host-parent/$$BASE"; \
-			echo "  Removed: $$WORKSPACE_DIR"; \
+			if [ -t 0 ]; then \
+				printf "  Remove manager workspace '%s'? [y/N] " "$$WORKSPACE_DIR"; \
+				read REPLY; \
+				if [ "$$REPLY" = "y" ] || [ "$$REPLY" = "Y" ]; then \
+					PARENT=$$(dirname "$$WORKSPACE_DIR"); \
+					BASE=$$(basename "$$WORKSPACE_DIR"); \
+					docker run --rm --entrypoint sh -v "$$PARENT:/host-parent" $(LOCAL_MANAGER) -c "rm -rf /host-parent/$$BASE"; \
+					echo "  Removed: $$WORKSPACE_DIR"; \
+				else \
+					echo "  Manager workspace preserved: $$WORKSPACE_DIR"; \
+				fi; \
+			else \
+				echo "  Manager workspace preserved: $$WORKSPACE_DIR"; \
+				echo "  To delete: rm -rf $$WORKSPACE_DIR"; \
+			fi; \
 		fi; \
 	fi
 	-rm -f ./hiclaw-manager.env
@@ -286,7 +297,8 @@ uninstall: ## Stop and remove Manager + all Worker containers
 
 # ---------- Replay ----------
 
-replay: ## Send a task to Manager (TASK="..." or interactive)
+replay: ## Send a task to Manager (TASK="..." or interactive, YOLO mode auto-enabled)
+	@docker exec hiclaw-manager touch /root/manager-workspace/yolo-mode 2>/dev/null || true
 ifdef TASK
 	./scripts/replay-task.sh "$(TASK)"
 else

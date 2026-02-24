@@ -214,6 +214,12 @@ require_llm_key() {
 # Docker helpers
 # ============================================================
 
+# Run a command inside the Manager container.
+# Used by matrix-client.sh and minio-client.sh to avoid exposing Matrix/MinIO ports to host.
+exec_in_manager() {
+    docker exec "${TEST_MANAGER_CONTAINER:-hiclaw-manager-test}" "$@"
+}
+
 start_worker_container() {
     local worker_name="$1"
     local container_name="hiclaw-test-worker-${worker_name}"

@@ -2,20 +2,17 @@
 # hiclaw-install.sh - One-click installation for HiClaw Manager and Worker
 #
 # Usage:
-#   ./hiclaw-install.sh                  # Interactive Manager setup (default)
+#   ./hiclaw-install.sh                  # Interactive installation (choose Quick Start or Manual)
 #   ./hiclaw-install.sh manager          # Same as above (explicit)
 #   ./hiclaw-install.sh worker --name <name> ...  # Worker installation
 #
-# All interactive prompts can be pre-set via environment variables.
-# Minimal install (only LLM key required):
-#   HICLAW_LLM_API_KEY=sk-xxx ./hiclaw-install.sh
+# Onboarding Modes:
+#   Quick Start  - Fast installation with all default values (recommended)
+#   Manual       - Customize each option step by step
 #
-# Non-interactive mode (all defaults, no prompts):
-#   HICLAW_NON_INTERACTIVE=1 HICLAW_LLM_API_KEY=sk-xxx ./hiclaw-install.sh
-#
-# Environment variables:
+# Environment variables (for automation):
 #   HICLAW_NON_INTERACTIVE    Skip all prompts, use defaults  (default: 0)
-#   HICLAW_LLM_PROVIDER      LLM provider       (default: qwen)
+#   HICLAW_LLM_PROVIDER      LLM provider       (default: alibaba-cloud)
 #   HICLAW_DEFAULT_MODEL      Default model       (default: qwen3.5-plus)
 #   HICLAW_LLM_API_KEY        LLM API key         (required)
 #   HICLAW_ADMIN_USER         Admin username       (default: admin)
@@ -353,6 +350,33 @@ install_manager() {
     log "Registry: ${HICLAW_REGISTRY}"
     log ""
 
+    # Onboarding mode selection (skip if already in non-interactive mode)
+    if [ "${HICLAW_NON_INTERACTIVE}" != "1" ]; then
+        log "--- Onboarding Mode ---"
+        echo ""
+        echo "Choose your installation mode:"
+        echo "  1) Quick Start  - Fast installation with all default values (recommended)"
+        echo "  2) Manual       - Customize each option step by step"
+        echo ""
+        read -p "Enter choice [1/2]: " ONBOARDING_CHOICE
+        ONBOARDING_CHOICE="${ONBOARDING_CHOICE:-1}"
+        
+        case "${ONBOARDING_CHOICE}" in
+            1|quick|quickstart)
+                log "Quick Start mode selected - using all default values"
+                HICLAW_NON_INTERACTIVE=1
+                ;;
+            2|manual)
+                log "Manual mode selected - you will be prompted for each option"
+                ;;
+            *)
+                log "Invalid choice, defaulting to Quick Start mode"
+                HICLAW_NON_INTERACTIVE=1
+                ;;
+        esac
+        log ""
+    fi
+
     # Check if Manager is already installed (by env file existence)
     local existing_env="${HICLAW_ENV_FILE:-./hiclaw-manager.env}"
     if [ -f "${existing_env}" ]; then
@@ -521,8 +545,57 @@ install_manager() {
 
     # LLM Configuration
     log "--- LLM Configuration ---"
-    prompt HICLAW_LLM_PROVIDER "LLM Provider (e.g., qwen, openai)" "qwen"
-    prompt HICLAW_DEFAULT_MODEL "Default Model ID" "qwen3.5-plus"
+    if [ "${HICLAW_NON_INTERACTIVE}" = "1" ]; then
+        # Quick Start mode: use default provider
+        HICLAW_LLM_PROVIDER="${HICLAW_LLM_PROVIDER:-alibaba-cloud}"
+        HICLAW_DEFAULT_MODEL="${HICLAW_DEFAULT_MODEL:-qwen3.5-plus}"
+        log "  Provider: ${HICLAW_LLM_PROVIDER} (default)"
+        log "  Model: ${HICLAW_DEFAULT_MODEL} (default)"
+    else
+        # Manual mode: show options
+        echo ""
+        echo "Available LLM Providers:"
+        echo "  1) alibaba-cloud  - Alibaba Cloud Bailian (default, recommended for Chinese users)"
+        echo "  2) openai         - OpenAI"
+        echo "  3) anthropic      - Anthropic Claude"
+        echo "  4) other          - Other providers (manual configuration)"
+        echo ""
+        read -p "Select provider [1/2/3/4]: " PROVIDER_CHOICE
+        PROVIDER_CHOICE="${PROVIDER_CHOICE:-1}"
+        
+        case "${PROVIDER_CHOICE}" in
+            1|alibaba-cloud)
+                HICLAW_LLM_PROVIDER="alibaba-cloud"
+                HICLAW_DEFAULT_MODEL="${HICLAW_DEFAULT_MODEL:-qwen3.5-plus}"
+                ;;
+            2|openai)
+                HICLAW_LLM_PROVIDER="openai"
+                HICLAW_DEFAULT_MODEL="${HICLAW_DEFAULT_MODEL:-gpt-4o}"
+                ;;
+            3|anthropic)
+                HICLAW_LLM_PROVIDER="anthropic"
+                HICLAW_DEFAULT_MODEL="${HICLAW_DEFAULT_MODEL:-claude-sonnet-4-20250514}"
+                ;;
+            4|other)
+                read -p "Enter provider name: " HICLAW_LLM_PROVIDER
+                read -p "Enter default model ID: " HICLAW_DEFAULT_MODEL
+                ;;
+            *)
+                HICLAW_LLM_PROVIDER="alibaba-cloud"
+                HICLAW_DEFAULT_MODEL="${HICLAW_DEFAULT_MODEL:-qwen3.5-plus}"
+                ;;
+        esac
+        log "  Provider: ${HICLAW_LLM_PROVIDER}"
+        log "  Model: ${HICLAW_DEFAULT_MODEL}"
+    fi
+    
+    # Prompt for API Key with helpful message
+    if [ "${HICLAW_LLM_PROVIDER}" = "alibaba-cloud" ] || [ "${HICLAW_LLM_PROVIDER}" = "qwen" ]; then
+        log ""
+        log "  💡 Get your Alibaba Cloud Bailian API Key from:"
+        log "     https://www.aliyun.com/product/bailian"
+        log ""
+    fi
     prompt HICLAW_LLM_API_KEY "LLM API Key" "" "true"
 
     log ""
@@ -773,8 +846,12 @@ EOF
     log "--- Other Consoles ---"
     log "  Higress Console: http://localhost:${HICLAW_PORT_CONSOLE} (Username: ${HICLAW_ADMIN_USER} / Password: ${HICLAW_ADMIN_PASSWORD})"
     log ""
-    log "Tip: You can also configure LLM providers and API keys via Higress Console,"
-    log "     or simply ask the Manager to do it for you in the chat."
+    log "--- Switch LLM Providers ---"
+    log "  You can switch to other LLM providers (OpenAI, Anthropic, etc.) via Higress Console."
+    log "  For detailed instructions, see:"
+    log "  https://higress.ai/en/docs/ai/scene-guide/multi-proxy#console-configuration"
+    log ""
+    log "Tip: You can also ask the Manager to configure LLM providers for you in the chat."
     log ""
     log "Configuration file: ${ENV_FILE}"
     if [ -n "${HICLAW_DATA_DIR}" ]; then
@@ -862,17 +939,15 @@ case "${1:-}" in
         echo ""
         echo "Commands:"
         echo "  manager              Interactive Manager installation (default)"
+        echo "                       Choose Quick Start (all defaults) or Manual mode"
         echo "  worker               Worker installation (requires --name and connection params)"
         echo ""
-        echo "All manager prompts can be pre-set via environment variables."
-        echo "Minimal interactive install (only LLM key required):"
-        echo "  HICLAW_LLM_API_KEY=sk-xxx $0"
+        echo "Quick Start (fastest):"
+        echo "  $0"
+        echo "  # Then select '1' for Quick Start mode"
         echo ""
-        echo "Non-interactive install (all defaults, no prompts):"
+        echo "Non-interactive (for automation):"
         echo "  HICLAW_NON_INTERACTIVE=1 HICLAW_LLM_API_KEY=sk-xxx $0"
-        echo ""
-        echo "With external data directory:"
-        echo "  HICLAW_DATA_DIR=~/hiclaw-data HICLAW_LLM_API_KEY=sk-xxx $0"
         echo ""
         echo "Worker Options:"
         echo "  --name <name>        Worker name (required)"

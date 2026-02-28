@@ -135,19 +135,21 @@ Manager: 好的，我来安排
 Manager: @你 Alice 完成了前端页面，Bob 完成了 API，项目已完成
          请在项目群里 Review 结果
 
-你: [打开手机 Element] 看到进度，满意 ✅
+你: [打开手机 Matrix 客户端] 看到进度，满意 ✅
 ```
 
 **你只需要做决策，不需要当保姆。**
 
 ### 移动端体验
 
-HiClaw 内置 Matrix 服务器和 Element 客户端：
+HiClaw 内置 Matrix 服务器，支持多种客户端：
 
 - **一键安装后直接用**：无需配置飞书/钉钉机器人
-- **手机上随时指挥**：下载 Element App，扫码登录
+- **手机上随时指挥**：下载 Matrix 客户端，推荐 **FluffyChat**（轻量、国区可下载）
 - **消息实时推送**：不会折叠到"服务号"
 - **所有对话可见**：你、Manager、Worker 在同一个 Room，全程透明
+
+> 💡 **移动端推荐**：国内用户推荐使用 **FluffyChat**，Element 在国区 iOS 暂未开放下载。FluffyChat 同样支持 iOS/Android/Web 全平台，体验流畅。
 
 ---
 
@@ -168,22 +170,27 @@ HICLAW_LLM_API_KEY=sk-xxx bash <(curl -sSL https://higress.ai/hiclaw/install.sh)
 ```
 === HiClaw Manager Started! ===
 
---- Access URLs ---
-  Element Web (IM Client): http://matrix-client-local.hiclaw.io:18080
-
-IMPORTANT: Add the following to your /etc/hosts file:
-  127.0.0.1 matrix-local.hiclaw.io matrix-client-local.hiclaw.io
-
-★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-  ★ Login to Element Web and start chatting with the Manager!  ★
-    Tell it: "Create a Worker named alice for frontend dev"    
-★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ★ Open the following URL in your browser to start:                           ★
+                                                                                
+    http://matrix-client-local.hiclaw.io:18080/#/login
+                                                                                
+  Login with:                                                                   
+    Username: admin
+    Password: [自动生成的密码]
+                                                                                
+  After login, start chatting with the Manager!                                 
+    Tell it: "Create a Worker named alice for frontend dev"                     
+    The Manager will handle everything automatically.                           
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
-### 第二步：打开 Element，开始对话（1 分钟）
+> 💡 **无需配置 hosts**：我们已经为你配好了 DNS 解析，`*.hiclaw.io` 会自动解析到 `127.0.0.1`，开箱即用！
 
-1. 打开浏览器访问 `http://matrix-client-local.hiclaw.io:18080`
-2. 用安装时显示的账号密码登录
+### 第二步：打开浏览器，登录开始对话（1 分钟）
+
+1. 打开浏览器访问安装时显示的 URL（如 `http://matrix-client-local.hiclaw.io:18080`）
+2. 输入安装时显示的用户名和密码登录
 3. 你会看到一个 "Manager" 的对话
 
 ### 第三步：创建你的第一个 Worker（1 分钟）
@@ -207,8 +214,8 @@ Alice: 好的，我正在处理...
 
 ### 第五步：在手机上查看进度（1 分钟）
 
-1. 下载 Element App（iOS/Android）
-2. 用同样的账号登录
+1. 下载 **FluffyChat**（iOS/Android/全平台）
+2. 登录时选择"其他服务器"，填入你的 Matrix 服务器地址
 3. 随时查看 Worker 的进度，随时干预
 
 ---

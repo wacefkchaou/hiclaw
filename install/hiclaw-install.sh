@@ -900,19 +900,10 @@ EOF
     fi
 
     # Pull images (worker image must be ready before manager creates workers)
-    # Skip pull if image already exists locally (e.g., built via make build)
-    if ! docker image inspect "${MANAGER_IMAGE}" >/dev/null 2>&1; then
-        log "Pulling Manager image: ${MANAGER_IMAGE}"
-        docker pull "${MANAGER_IMAGE}"
-    else
-        log "Manager image already exists locally: ${MANAGER_IMAGE}"
-    fi
-    if ! docker image inspect "${WORKER_IMAGE}" >/dev/null 2>&1; then
-        log "Pulling Worker image: ${WORKER_IMAGE}"
-        docker pull "${WORKER_IMAGE}"
-    else
-        log "Worker image already exists locally: ${WORKER_IMAGE}"
-    fi
+    log "Pulling Manager image: ${MANAGER_IMAGE}"
+    docker pull "${MANAGER_IMAGE}"
+    log "Pulling Worker image: ${WORKER_IMAGE}"
+    docker pull "${WORKER_IMAGE}"
 
     # Run Manager container
     log "Starting Manager container..."

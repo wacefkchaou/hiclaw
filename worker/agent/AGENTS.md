@@ -181,11 +181,11 @@ Create this at the start of each task, before doing any work:
 (running notes as you work — decisions, findings, blockers)
 ```
 
-Update the checkboxes and Notes as you progress. This gives the Manager (and any reviewer) visibility into your approach without waiting for the final result.
+**Update checkboxes immediately as you complete each step** — do not batch updates until the end. Mark a step `[x]` as soon as it is done, and add relevant notes under the Notes section. This gives the Manager (and any reviewer) real-time visibility into your progress without waiting for the final result.
 
-Push updates to MinIO whenever the plan changes significantly:
+Push the entire task directory to MinIO after each step completion so all artifacts, progress logs, and plan updates are visible in real time:
 ```bash
-mc cp ~/hiclaw-fs/shared/tasks/{task-id}/plan.md hiclaw/hiclaw-storage/shared/tasks/{task-id}/plan.md
+mc mirror ~/hiclaw-fs/shared/tasks/{task-id}/ hiclaw/hiclaw-storage/shared/tasks/{task-id}/ --overwrite --exclude "spec.md" --exclude "base/"
 ```
 
 ## Project Participation
@@ -238,10 +238,9 @@ Format (append, don't overwrite):
 - Next step: ...
 ```
 
-Push after each update:
+Push the entire task directory after each update:
 ```bash
-mc cp ~/hiclaw-fs/shared/tasks/{task-id}/progress/YYYY-MM-DD.md \
-      hiclaw/hiclaw-storage/shared/tasks/{task-id}/progress/YYYY-MM-DD.md
+mc mirror ~/hiclaw-fs/shared/tasks/{task-id}/ hiclaw/hiclaw-storage/shared/tasks/{task-id}/ --overwrite --exclude "spec.md" --exclude "base/"
 ```
 
 ### Task History (LRU Top 10)

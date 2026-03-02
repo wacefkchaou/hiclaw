@@ -517,6 +517,7 @@ bash /opt/hiclaw/agent/skills/worker-management/scripts/push-worker-skills.sh \
 DEPLOY_MODE="remote"
 CONTAINER_ID=""
 INSTALL_CMD=""
+WORKER_STATUS="pending_install"
 
 source /opt/hiclaw/scripts/lib/container-api.sh
 
@@ -539,9 +540,14 @@ elif container_api_available; then
     CONTAINER_ID=$(echo "${CREATE_OUTPUT}" | tail -1)
     if [ -n "${CONTAINER_ID}" ] && [ ${#CONTAINER_ID} -ge 12 ]; then
         DEPLOY_MODE="local"
-        sleep 3
-        STATUS=$(container_status_worker "${WORKER_NAME}")
-        log "  Container status: ${STATUS}"
+        log "  Waiting for Worker agent to be ready..."
+        if container_wait_worker_ready "${WORKER_NAME}" 120; then
+            WORKER_STATUS="ready"
+            log "  Worker agent is ready!"
+        else
+            WORKER_STATUS="starting"
+            log "  WARNING: Worker agent not ready within timeout (container may still be initializing)"
+        fi
     else
         log "  WARNING: Container creation failed, falling back to remote mode"
         INSTALL_CMD=$(_build_install_cmd)
@@ -561,7 +567,7 @@ RESULT=$(jq -n \
     --arg consumer "${CONSUMER_NAME}" \
     --arg mode "${DEPLOY_MODE}" \
     --arg container_id "${CONTAINER_ID}" \
-    --arg status "$([ "${DEPLOY_MODE}" = "local" ] && echo "started" || echo "pending_install")" \
+    --arg status "${WORKER_STATUS}" \
     --arg install_cmd "${INSTALL_CMD:-}" \
     --argjson skills "${SKILLS_JSON}" \
     '{

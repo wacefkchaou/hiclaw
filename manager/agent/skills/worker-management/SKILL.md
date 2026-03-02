@@ -101,9 +101,14 @@ The script outputs a JSON result after `---RESULT---`:
   "skills": ["file-sync", "github-operations"],
   "mode": "local",
   "container_id": "abc123...",
-  "status": "started"
+  "status": "ready"
 }
 ```
+
+**`status` values:**
+- `"ready"` — Worker container is running and the OpenClaw gateway confirmed healthy. Safe to report success to admin.
+- `"starting"` — Container is running but the gateway health check timed out (120 s). The Worker may still be initializing (e.g. slow MinIO sync on first boot). Report this to admin and suggest they check `container_logs_worker` after a minute.
+- `"pending_install"` — Local container runtime not available. Admin must run the `install_cmd` on the target machine.
 
 Report the result to the human admin. If `status` is `"pending_install"`, provide the `install_cmd` from the JSON output. Also remind the admin that for remote deployment, the Worker machine must be able to resolve these domains to the Manager's IP (via DNS or `/etc/hosts`):
 

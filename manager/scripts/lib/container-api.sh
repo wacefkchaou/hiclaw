@@ -238,6 +238,73 @@ container_status_worker() {
     fi
 }
 
+# Execute a command inside a Worker container via Docker exec API
+# Usage: container_exec_worker <worker_name> <cmd> [args...]
+# Returns: command output (raw Docker stream; contains binary framing prefix per chunk)
+container_exec_worker() {
+    local worker_name="$1"
+    shift
+    local container_name="${WORKER_CONTAINER_PREFIX}${worker_name}"
+
+    # Build JSON array from args using jq for proper escaping
+    local cmd_json
+    cmd_json=$(jq -cn --args '$ARGS.positional' -- "$@")
+
+    # Create exec instance
+    local exec_create
+    exec_create=$(_api POST "/containers/${container_name}/exec" \
+        "{\"AttachStdout\":true,\"AttachStderr\":true,\"Tty\":false,\"Cmd\":${cmd_json}}")
+
+    local exec_id
+    exec_id=$(echo "${exec_create}" | jq -r '.Id // empty' 2>/dev/null)
+
+    if [ -z "${exec_id}" ]; then
+        return 1
+    fi
+
+    # Start exec and stream output (binary-framed; callers can grep the raw bytes)
+    _api POST "/exec/${exec_id}/start" '{"Detach":false,"Tty":false}'
+    return 0
+}
+
+# Wait for Worker agent (OpenClaw gateway) to become ready
+# Mirrors the wait_manager_ready logic in hiclaw-install.sh
+# Usage: container_wait_worker_ready <worker_name> [timeout_seconds]
+# Returns: 0 if ready, 1 if timed out or container stopped unexpectedly
+container_wait_worker_ready() {
+    local worker_name="$1"
+    local timeout="${2:-120}"
+    local elapsed=0
+
+    _log "Waiting for Worker ${worker_name} to be ready (timeout: ${timeout}s)..."
+
+    while [ "${elapsed}" -lt "${timeout}" ]; do
+        # Bail early if the container is no longer running
+        local cstatus
+        cstatus=$(container_status_worker "${worker_name}")
+        if [ "${cstatus}" != "running" ]; then
+            _log "Worker container ${worker_name} stopped unexpectedly (status: ${cstatus})"
+            return 1
+        fi
+
+        # Check OpenClaw gateway health inside the worker container.
+        # The Docker exec API returns a binary-framed stream, but grep -q still
+        # finds the string inside the payload bytes.
+        if container_exec_worker "${worker_name}" openclaw gateway health --json 2>/dev/null \
+                | grep -q '"ok"' 2>/dev/null; then
+            _log "Worker ${worker_name} is ready!"
+            return 0
+        fi
+
+        sleep 5
+        elapsed=$((elapsed + 5))
+        _log "Waiting for Worker ${worker_name}... (${elapsed}s/${timeout}s)"
+    done
+
+    _log "Worker ${worker_name} did not become ready within ${timeout}s"
+    return 1
+}
+
 # List all HiClaw Worker containers
 container_list_workers() {
     _api GET "/containers/json?all=true&filters=%7B%22name%22%3A%5B%22${WORKER_CONTAINER_PREFIX}%22%5D%7D" 2>/dev/null | \

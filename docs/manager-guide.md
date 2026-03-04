@@ -15,23 +15,30 @@ The Manager is configured via environment variables set during installation. The
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `HICLAW_LLM_API_KEY` | Yes | - | LLM API key |
-| `HICLAW_LLM_PROVIDER` | No | `qwen` | LLM provider name (qwen, openai, etc.) |
+| `HICLAW_LLM_PROVIDER` | No | `qwen` | LLM provider (`qwen` for Alibaba Cloud, `openai-compat` for OpenAI-compatible APIs) |
 | `HICLAW_DEFAULT_MODEL` | No | `qwen3.5-plus` | Default model ID |
 | `HICLAW_ADMIN_USER` | No | `admin` | Human admin Matrix username |
-| `HICLAW_ADMIN_PASSWORD` | No | (auto-generated) | Human admin password |
-| `HICLAW_MATRIX_DOMAIN` | No | `matrix-local.hiclaw.io:8080` | Matrix server domain |
+| `HICLAW_ADMIN_PASSWORD` | No | (auto-generated) | Human admin password (min 8 chars, MinIO requirement) |
+| `HICLAW_MATRIX_DOMAIN` | No | `matrix-local.hiclaw.io:18080` | Matrix server domain (used inside container) |
 | `HICLAW_MATRIX_CLIENT_DOMAIN` | No | `matrix-client-local.hiclaw.io` | Element Web domain |
 | `HICLAW_AI_GATEWAY_DOMAIN` | No | `aigw-local.hiclaw.io` | AI Gateway domain (for LLM and MCP) |
 | `HICLAW_FS_DOMAIN` | No | `fs-local.hiclaw.io` | File system domain |
+| `HICLAW_PORT_GATEWAY` | No | `18080` | Host port for Higress gateway |
+| `HICLAW_PORT_CONSOLE` | No | `18001` | Host port for Higress console |
+| `HICLAW_PORT_ELEMENT_WEB` | No | `18088` | Host port for Element Web direct access |
 | `HICLAW_GITHUB_TOKEN` | No | - | GitHub PAT for MCP Server |
 | `HICLAW_WORKER_IMAGE` | No | `hiclaw/worker-agent:latest` | Worker Docker image for direct creation |
+| `HICLAW_WORKSPACE_DIR` | No | `~/hiclaw-manager` | Host directory for Manager workspace (bind-mounted to `/root/manager-workspace`) |
+| `HICLAW_DATA_DIR` | No | `hiclaw-data` | Docker volume name for persistent data |
+| `HICLAW_MOUNT_SOCKET` | No | `1` | Mount container runtime socket for direct Worker creation |
+| `HICLAW_YOLO` | No | - | Set to `1` to enable YOLO mode (autonomous decisions, no interactive prompts) |
 
 ### Customizing the Manager Agent
 
 The Manager Agent's behavior is defined by three files in MinIO:
 
 1. **SOUL.md** - Agent identity, security rules, communication model
-2. **HEARTBEAT.md** - Periodic check routine (every 15 minutes)
+2. **HEARTBEAT.md** - Periodic check routine (triggered by OpenClaw's built-in heartbeat mechanism)
 3. **AGENTS.md** - Available skills and task workflow
 
 To customize, edit these files in MinIO Console (http://localhost:9001) under `hiclaw-storage/agents/manager/`.
@@ -139,7 +146,7 @@ To manually trigger keepalive for a specific room:
 
 ```bash
 docker exec hiclaw-manager bash -c \
-  'MANAGER_MATRIX_TOKEN=$(jq -r .channels.matrix.accessToken ~/openclaw.json) \
+  'MANAGER_MATRIX_TOKEN=$(jq -r .channels.matrix.accessToken ~/manager-workspace/openclaw.json) \
    bash /opt/hiclaw/scripts/session-keepalive.sh --action keepalive --room "!roomid:domain"'
 ```
 
@@ -147,11 +154,11 @@ To view active rooms and current preferences:
 
 ```bash
 docker exec hiclaw-manager bash -c \
-  'MANAGER_MATRIX_TOKEN=$(jq -r .channels.matrix.accessToken ~/openclaw.json) \
+  'MANAGER_MATRIX_TOKEN=$(jq -r .channels.matrix.accessToken ~/manager-workspace/openclaw.json) \
    bash /opt/hiclaw/scripts/session-keepalive.sh --action list-rooms'
 
 docker exec hiclaw-manager bash -c \
-  'MANAGER_MATRIX_TOKEN=$(jq -r .channels.matrix.accessToken ~/openclaw.json) \
+  'MANAGER_MATRIX_TOKEN=$(jq -r .channels.matrix.accessToken ~/manager-workspace/openclaw.json) \
    bash /opt/hiclaw/scripts/session-keepalive.sh --action load-prefs'
 ```
 
@@ -220,16 +227,16 @@ make replay-log
 
 ```bash
 # Check individual services
-curl -s http://127.0.0.1:6167/_matrix/client/versions   # Matrix
-curl -s http://127.0.0.1:9000/minio/health/live          # MinIO
-curl -s http://127.0.0.1:8001/                            # Higress Console
+curl -s http://127.0.0.1:6167/_matrix/client/versions   # Matrix (internal port, from host via docker exec)
+curl -s http://127.0.0.1:9000/minio/health/live          # MinIO (internal port, from host via docker exec)
+curl -s http://127.0.0.1:18001/                           # Higress Console (host port)
 ```
 
 ### Consoles
 
-- **Higress Console**: http://localhost:8001 - Gateway management, routes, consumers
-- **MinIO Console**: http://localhost:9001 - File system browsing, agent configs
-- **Element Web**: http://matrix-client-local.hiclaw.io:8080 - IM interface
+- **Higress Console**: http://localhost:18001 - Gateway management, routes, consumers
+- **MinIO Console**: http://localhost:9001 - File system browsing, agent configs (direct port, not via gateway)
+- **Element Web**: http://127.0.0.1:18088 - IM interface (direct port), or http://matrix-client-local.hiclaw.io:18080 via gateway
 
 ## Backup and Recovery
 

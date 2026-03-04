@@ -52,7 +52,8 @@ hiclaw/
 ### To modify Agent behavior
 - [manager/agent/SOUL.md](manager/agent/SOUL.md) -- Manager personality and rules
 - [manager/agent/HEARTBEAT.md](manager/agent/HEARTBEAT.md) -- periodic check routine
-- [manager/agent/skills/](manager/agent/skills/) -- Manager's 4 core skills (each with SKILL.md, scripts/, references/)
+- [manager/agent/skills/](manager/agent/skills/) -- Manager's skills (9 skill directories, each with SKILL.md and optional scripts/references/)
+- [manager/agent/worker-skills/](manager/agent/worker-skills/) -- Skill definitions pushed to Workers on creation
 - [worker/agent/skills/github-operations/SKILL.md](worker/agent/skills/github-operations/SKILL.md) -- Worker GitHub skill
 
 ### To modify CI/CD

@@ -326,27 +326,30 @@ Mounting the container runtime socket gives the container full control over the 
 
 ### Node.js Version
 
-OpenClaw requires **Node.js >= 22** (the `--disable-warning` flag used internally requires Node.js 21.3+). Both Manager and Worker Dockerfiles use `n` (node version manager) to upgrade from the base `node:20-slim` image to Node 22 during build.
+OpenClaw requires **Node.js >= 22** (the `--disable-warning` flag used internally requires Node.js 21.3+). The Manager image is built on `openclaw-base` which already includes Node.js 22. The Worker Dockerfile copies Node.js 22 from a build stage.
 
-- **Manager**: Node 22 binary copied from build stage overrides the Higress base image's Node.js v12.
+- **Manager**: Node 22 is provided by `openclaw-base` (the base image already includes it).
 - **Worker**: Node 22 binary copied from build stage replaces Ubuntu 24.04 apt's Node.js 18.x (which lacks `--disable-warning` support).
 
 ### Higress AI Provider API
 
-The current Higress Console API does not support creating a `qwen` type provider directly — it returns "Missing Qwen specific configurations". The workaround is to use `type=openai` with `rawConfigs.apiUrl` pointing to the DashScope OpenAI-compatible endpoint:
+When creating a `qwen` type provider via the Higress Console API, you must include `rawConfigs` with Qwen-specific fields — otherwise the API returns "Missing Qwen specific configurations". The correct body is:
 
 ```json
 {
+  "type": "qwen",
   "name": "qwen",
-  "type": "openai",
   "tokens": ["your-api-key"],
+  "protocol": "openai/v1",
   "rawConfigs": {
-    "apiUrl": "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    "qwenEnableSearch": false,
+    "qwenEnableCompatible": true,
+    "qwenFileIds": []
   }
 }
 ```
 
-This is handled automatically in `manager/scripts/init/setup-higress.sh`.
+For OpenAI-compatible providers (DeepSeek, etc.), use `type=openai` with `rawConfigs.apiUrl` pointing to the provider's endpoint. This is all handled automatically in `manager/scripts/init/setup-higress.sh`.
 
 ### OpenClaw Skills Format
 
@@ -417,7 +420,7 @@ make replay-log
 
 ```bash
 docker exec hiclaw-manager bash -c \
-  'OPENCLAW_CONFIG_PATH=/root/hiclaw-fs/agents/manager/openclaw.json openclaw skills list --json' \
+  'OPENCLAW_CONFIG_PATH=/root/manager-workspace/openclaw.json openclaw skills list --json' \
   | jq '.skills[] | select(.source == "openclaw-workspace") | {name, eligible, description}'
 ```
 
@@ -431,22 +434,22 @@ docker exec -it hiclaw-manager bash
 
 ```bash
 # Login (init uses "name", login uses "username")
-curl -X POST http://localhost:8001/session/login \
+curl -X POST http://localhost:18001/session/login \
   -H 'Content-Type: application/json' \
   -c /tmp/cookie \
   -d '{"username": "admin", "password": "your-password"}'
 
 # List consumers
-curl -s http://localhost:8001/v1/consumers -b /tmp/cookie | jq
+curl -s http://localhost:18001/v1/consumers -b /tmp/cookie | jq
 
 # List routes
-curl -s http://localhost:8001/v1/routes -b /tmp/cookie | jq
+curl -s http://localhost:18001/v1/routes -b /tmp/cookie | jq
 
 # List AI providers
-curl -s http://localhost:8001/v1/ai/providers -b /tmp/cookie | jq
+curl -s http://localhost:18001/v1/ai/providers -b /tmp/cookie | jq
 
 # List AI routes
-curl -s http://localhost:8001/v1/ai/routes -b /tmp/cookie | jq
+curl -s http://localhost:18001/v1/ai/routes -b /tmp/cookie | jq
 ```
 
 ### Check MinIO State
@@ -462,11 +465,12 @@ mc ls test/hiclaw-storage/ --recursive
 |---------|-------|-----|
 | `git clone` hangs during `docker build` | No proxy in build env | Pass `--build-arg http_proxy=...` via `DOCKER_BUILD_ARGS` |
 | Health checks return 503 | `http_proxy` capturing localhost requests | Set `no_proxy=localhost,127.0.0.1,::1` |
-| OpenClaw: `SyntaxError: Unexpected reserved word` | Node.js too old (v12/v20) | Ensure Dockerfile installs Node >= 22 via `n` |
+| OpenClaw: `SyntaxError: Unexpected reserved word` | Node.js too old | Ensure Manager uses `openclaw-base` image; Worker uses Node.js 22 from build stage |
 | OpenClaw: `requires Node >=22.0.0` | Same as above | Same as above |
 | `--disable-warning= is not allowed in NODE_OPTIONS` | Node.js < 21.3 (e.g., Ubuntu apt's v18) | Ensure Worker uses Node.js 22 from build stage, not apt |
 | OpenClaw: `gateway.mode=local` required | Missing gateway config in openclaw.json | Add `"gateway": {"mode": "local", ...}` |
 | OpenClaw: `no token is configured` | Missing gateway auth token | Add `"gateway": {"auth": {"token": "..."}}` |
-| Higress: `Missing Qwen specific configurations` | `type=qwen` not supported in current API | Use `type=openai` + `rawConfigs.apiUrl` |
+| Higress: `Missing Qwen specific configurations` | `type=qwen` requires `rawConfigs` fields | Include `rawConfigs: {qwenEnableCompatible: true, ...}` — see `setup-higress.sh` |
 | Skills not loaded by OpenClaw | Missing YAML front matter in SKILL.md | Add `---\nname: ...\ndescription: ...\n---` |
-| `setup-higress.sh` crashes on restart | `set -e` + `curl -sf` on "already exists" errors | Use `higress_api()` helper with `\|\| true` |
+| `setup-higress.sh` crashes on restart | `set -e` + `curl -sf` on "already exists" errors | Use `higress_api()` helper which handles this gracefully |
+| Higress setup runs again on restart, resets consumers | Missing setup marker | Check `/data/.higress-setup-done`; delete it only to force re-setup |

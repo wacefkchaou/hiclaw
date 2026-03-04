@@ -41,7 +41,7 @@ Both methods support environment variable overrides for all settings. See `insta
 
 ### 1.2 Login to Element Web
 
-Open http://127.0.0.1:18088 in your browser.
+Open http://127.0.0.1:18088 in your browser (direct access port). Alternatively, access via the gateway at http://matrix-client-local.hiclaw.io:18080 if you've added the domain to your `/etc/hosts`.
 
 Login with your admin credentials.
 
@@ -51,7 +51,7 @@ Login with your admin credentials.
 - [ ] Element Web loads in browser at http://127.0.0.1:18088
 - [ ] Login with admin credentials succeeds
 - [ ] Higress Console accessible at http://localhost:18001
-- [ ] MinIO Console accessible at http://localhost:9001
+- [ ] MinIO Console accessible at http://localhost:18080 (via gateway) or http://localhost:9001 (direct, if port is exposed)
 
 ---
 
@@ -83,7 +83,7 @@ The Manager Agent will:
 2. Create a Higress consumer `worker-alice` with key-auth credentials
 3. Generate Alice's configuration files in MinIO
 4. Create a Matrix Room (you, Manager, and Alice)
-5. Start the Worker (direct creation or install command, depending on your request)
+5. Start the Worker (direct creation or install command, depending on your request and whether the container runtime socket is mounted)
 
 ### 2.3 Start Worker Alice
 
@@ -113,8 +113,8 @@ The Manager will provide all the specific values in its reply.
 ### Verification Checklist
 
 - [ ] Alice's Room appears in Element Web (3 members: you, manager, alice)
-- [ ] Higress Console shows `worker-alice` consumer (http://localhost:8001)
-- [ ] MinIO has `agents/alice/SOUL.md` file (http://localhost:9001)
+- [ ] Higress Console shows `worker-alice` consumer (http://localhost:18001)
+- [ ] MinIO has `agents/alice/SOUL.md` file (accessible via MinIO Console or `mc ls`)
 - [ ] Worker container running: `docker ps | grep hiclaw-worker-alice`
 
 ---
@@ -188,7 +188,7 @@ Send a task that takes some time to complete.
 
 ### 5.2 Wait for heartbeat cycle
 
-The Manager Agent runs a heartbeat check every 15 minutes. During the heartbeat:
+The Manager Agent runs a heartbeat check periodically (triggered by OpenClaw's built-in heartbeat mechanism). During the heartbeat:
 - Manager checks each Worker's Room for recent activity
 - For Workers with assigned tasks, Manager asks for status
 - The inquiry is visible in the Room

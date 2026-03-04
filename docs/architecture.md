@@ -7,11 +7,11 @@ HiClaw is an Agent Teams system that enables multiple AI Agents to collaborate v
 ```mermaid
 graph TB
     subgraph Manager Container
-        HG[Higress AI Gateway<br/>:8080]
-        HC[Higress Console<br/>:8001]
-        TW[Tuwunel Matrix Server<br/>:6167]
-        EW[Element Web<br/>:8088]
-        MO[MinIO<br/>:9000 / :9001]
+        HG[Higress AI Gateway<br/>:8080 internal]
+        HC[Higress Console<br/>:8001 internal]
+        TW[Tuwunel Matrix Server<br/>:6167 internal]
+        EW[Element Web / Nginx<br/>:8088 internal]
+        MO[MinIO<br/>:9000 / :9001 internal]
         MA[Manager Agent<br/>OpenClaw]
         MC[mc mirror]
     end
@@ -57,14 +57,16 @@ Higress serves as the unified entry point for all external access:
 
 | Port | Service | Purpose |
 |------|---------|---------|
-| 8080 | Gateway | Reverse proxy for all domain-based routing |
-| 8001 | Console | Management API (Session Cookie auth) |
+| 8080 | Gateway | Reverse proxy for all domain-based routing (exposed as 18080 by default) |
+| 8001 | Console | Management API (Session Cookie auth, exposed as 18001 by default) |
 
 **Routes configured:**
 - `matrix-local.hiclaw.io` -> Tuwunel (port 6167) - Matrix Homeserver
 - `matrix-client-local.hiclaw.io` -> Element Web (port 8088) - IM web client
 - `fs-local.hiclaw.io` -> MinIO (port 9000) - HTTP file system (auth required)
 - `aigw-local.hiclaw.io` -> AI Gateway - LLM proxy + MCP servers (auth required)
+
+> All domain-based routes go through the gateway on port 8080 (host: 18080). Element Web is also directly accessible on host port 18088 (maps to container port 8088).
 
 ### Matrix Homeserver (Tuwunel)
 
@@ -87,7 +89,7 @@ The Manager Agent coordinates the entire team:
 - Receives tasks from human via Matrix DM **or any other configured channel** (Discord, Feishu, Telegram, etc.)
 - Creates Workers (Matrix accounts + Higress consumers + config files)
 - Assigns and tracks tasks
-- Runs heartbeat checks every 15 minutes
+- Runs heartbeat checks (triggered by OpenClaw's built-in heartbeat mechanism)
 - Manages credentials and access control
 - Automatically stops idle Worker containers and restarts them on task assignment
 - Monitors Matrix room session expiry and sends keepalive messages on request

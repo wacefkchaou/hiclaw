@@ -182,17 +182,20 @@ Alice：前端校验也更新了。
 docker exec -it hiclaw-manager cat /var/log/hiclaw/manager-agent.log
 ```
 
+更多常见问题（启动超时、局域网访问等）参见 [docs/zh-cn/faq.md](docs/zh-cn/faq.md)。
+
 欢迎[提交 Issue](https://github.com/higress-group/hiclaw/issues)，或在 [Discord](https://discord.gg/n6mV8xEYUF) / 钉钉群里随时提问。
 
 ## 文档
 
 | | |
 |---|---|
-| [docs/quickstart.md](docs/quickstart.md) | 端到端快速入门，含验证检查点 |
-| [docs/architecture.md](docs/architecture.md) | 系统架构详解 |
-| [docs/manager-guide.md](docs/manager-guide.md) | Manager 配置与使用 |
-| [docs/worker-guide.md](docs/worker-guide.md) | Worker 部署与故障排查 |
-| [docs/development.md](docs/development.md) | 贡献指南与本地开发 |
+| [docs/zh-cn/quickstart.md](docs/zh-cn/quickstart.md) | 端到端快速入门，含验证检查点 |
+| [docs/zh-cn/architecture.md](docs/zh-cn/architecture.md) | 系统架构详解 |
+| [docs/zh-cn/manager-guide.md](docs/zh-cn/manager-guide.md) | Manager 配置与使用 |
+| [docs/zh-cn/worker-guide.md](docs/zh-cn/worker-guide.md) | Worker 部署与故障排查 |
+| [docs/zh-cn/development.md](docs/zh-cn/development.md) | 贡献指南与本地开发 |
+| [docs/zh-cn/faq.md](docs/zh-cn/faq.md) | 常见问题 |
 
 ## 构建与测试
 

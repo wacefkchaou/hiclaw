@@ -182,6 +182,8 @@ If the Manager container fails to start, check the agent log for details:
 docker exec -it hiclaw-manager cat /var/log/hiclaw/manager-agent.log
 ```
 
+See [docs/zh-cn/faq.md](docs/zh-cn/faq.md) for common issues (startup timeout, LAN access, etc.).
+
 Feel free to [open an issue](https://github.com/higress-group/hiclaw/issues) or ask in [Discord](https://discord.gg/n6mV8xEYUF) / DingTalk group.
 
 ## Documentation
@@ -193,6 +195,8 @@ Feel free to [open an issue](https://github.com/higress-group/hiclaw/issues) or 
 | [docs/manager-guide.md](docs/manager-guide.md) | Manager configuration |
 | [docs/worker-guide.md](docs/worker-guide.md) | Worker deployment and troubleshooting |
 | [docs/development.md](docs/development.md) | Contributing and local dev |
+
+Chinese docs: [docs/zh-cn/](docs/zh-cn/) — including [FAQ](docs/zh-cn/faq.md)
 
 ## Build & Test
 

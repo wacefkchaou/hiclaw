@@ -13,6 +13,9 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
+# Source metrics library
+source "${SCRIPT_DIR}/lib/agent-metrics.sh" 2>/dev/null || true
+
 # ============================================================
 # Configuration
 # ============================================================
@@ -261,7 +264,45 @@ for test_file in "${TESTS[@]}"; do
 done
 
 # ============================================================
-# Step 5: Report results
+# Step 5: Aggregate metrics from all tests
+# ============================================================
+
+log "Aggregating test metrics..."
+
+# Collect all test names that generated metrics
+METRIC_FILES=()
+for test_file in "${TESTS[@]}"; do
+    test_name=$(basename "${test_file}" .sh)
+    metric_file="${TEST_OUTPUT_DIR}/metrics-${test_name}.json"
+    if [ -f "$metric_file" ]; then
+        METRIC_FILES+=("$test_name")
+    fi
+done
+
+# Generate summary if any metrics exist
+if [ ${#METRIC_FILES[@]} -gt 0 ]; then
+    METRICS_SUMMARY=$(generate_metrics_summary "${METRIC_FILES[@]}")
+    
+    # Save summary
+    echo "$METRICS_SUMMARY" > "${TEST_OUTPUT_DIR}/metrics-summary.json"
+    
+    echo ""
+    echo "========================================"
+    echo "  Aggregate Metrics Summary"
+    echo "========================================"
+    echo "$METRICS_SUMMARY" | jq -r '
+        "  Tests with metrics: \(.tests | length)
+         Total LLM Calls:     \(.totals.llm_calls)
+         Total Input Tokens:  \(.totals.tokens.input)
+         Total Output Tokens: \(.totals.tokens.output)
+         Total Tokens:        \(.totals.tokens.total)"'
+    echo "========================================"
+    echo "  Metrics saved to: ${TEST_OUTPUT_DIR}/metrics-summary.json"
+    echo ""
+fi
+
+# ============================================================
+# Step 6: Report results
 # ============================================================
 
 echo ""

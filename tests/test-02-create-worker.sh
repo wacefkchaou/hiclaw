@@ -2,17 +2,21 @@
 # test-02-create-worker.sh - Case 2: Create Worker Alice via Matrix conversation
 # Verifies: Manager creates Matrix user, Higress consumer, Room, config files,
 #           and returns install command
+#
+# Metrics: Tracks LLM calls, token usage, and timing for Manager and Worker
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/lib/test-helpers.sh"
 source "${SCRIPT_DIR}/lib/matrix-client.sh"
 source "${SCRIPT_DIR}/lib/higress-client.sh"
 source "${SCRIPT_DIR}/lib/minio-client.sh"
+source "${SCRIPT_DIR}/lib/agent-metrics.sh"
 
-test_setup "02-create-worker"
+TEST_NAME="02-create-worker"
+test_setup "${TEST_NAME}"
 
 if ! require_llm_key; then
-    test_teardown "02-create-worker"
+    test_teardown "${TEST_NAME}"
     test_summary
     exit 0
 fi
@@ -101,5 +105,34 @@ log_section "Start Worker Container"
 # In real test, we would parse the install command from REPLY
 log_info "Worker Alice verification complete (container start requires install params from Manager)"
 
-test_teardown "02-create-worker"
+# ============================================================
+# Collect Agent Metrics
+# ============================================================
+
+log_section "Collect Agent Metrics"
+
+# Collect metrics from Manager and Worker alice
+METRICS=$(collect_test_metrics "${TEST_NAME}" "alice")
+
+# Print formatted report
+print_metrics_report "$METRICS"
+
+# Assert thresholds (based on observed values * 2 for safety margin)
+# Observed: Manager ~3 LLM calls, ~45123 input tokens, ~892 output tokens
+# Thresholds set to observed * 2
+assert_metrics_threshold "$METRICS" "manager" "llm_calls" "${METRICS_THRESHOLD_MANAGER_LLM_CALLS:-6}"
+assert_metrics_threshold "$METRICS" "manager" "tokens.input" "${METRICS_THRESHOLD_MANAGER_TOKENS_INPUT:-100000}"
+assert_metrics_threshold "$METRICS" "manager" "tokens.output" "${METRICS_THRESHOLD_MANAGER_TOKENS_OUTPUT:-2000}"
+
+# Check if alice was involved (may not be if container wasn't started)
+if echo "$METRICS" | jq -e '.agents.alice' > /dev/null 2>&1; then
+    assert_metrics_threshold "$METRICS" "alice" "llm_calls" "${METRICS_THRESHOLD_WORKER_LLM_CALLS:-4}"
+    assert_metrics_threshold "$METRICS" "alice" "tokens.input" "${METRICS_THRESHOLD_WORKER_TOKENS_INPUT:-30000}"
+    assert_metrics_threshold "$METRICS" "alice" "tokens.output" "${METRICS_THRESHOLD_WORKER_TOKENS_OUTPUT:-1000}"
+fi
+
+# Save metrics to file for CI aggregation
+save_metrics_file "$METRICS" "${TEST_NAME}"
+
+test_teardown "${TEST_NAME}"
 test_summary

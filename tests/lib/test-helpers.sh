@@ -10,6 +10,13 @@
 # Configuration
 # ============================================================
 
+# Project root for output directory resolution
+_PROJECT_HELPERS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export PROJECT_ROOT="${PROJECT_ROOT:-$(cd "${_PROJECT_HELPERS_DIR}/../.." && pwd)}"
+
+# Output directory for test results and metrics
+export TEST_OUTPUT_DIR="${TEST_OUTPUT_DIR:-${PROJECT_ROOT}/tests/output}"
+
 export TEST_MANAGER_HOST="${TEST_MANAGER_HOST:-127.0.0.1}"
 export TEST_MATRIX_PORT="${TEST_MATRIX_PORT:-6167}"
 export TEST_GATEWAY_PORT="${TEST_GATEWAY_PORT:-8080}"
@@ -20,8 +27,15 @@ export TEST_ELEMENT_PORT="${TEST_ELEMENT_PORT:-8088}"
 
 export TEST_MATRIX_URL="http://${TEST_MANAGER_HOST}:${TEST_GATEWAY_PORT}"
 export TEST_MATRIX_DIRECT_URL="${TEST_MATRIX_DIRECT_URL:-http://${TEST_MANAGER_HOST}:${TEST_MATRIX_PORT}}"
+export TEST_MATRIX_DOMAIN="${TEST_MATRIX_DOMAIN:-matrix-local.hiclaw.io:${TEST_GATEWAY_PORT}}"
 export TEST_CONSOLE_URL="http://${TEST_MANAGER_HOST}:${TEST_CONSOLE_PORT}"
 export TEST_MINIO_URL="http://${TEST_MANAGER_HOST}:${TEST_MINIO_PORT}"
+
+# Admin credentials for Matrix, Higress, MinIO
+export TEST_ADMIN_USER="${TEST_ADMIN_USER:-admin}"
+export TEST_ADMIN_PASSWORD="${TEST_ADMIN_PASSWORD:-testpassword123}"
+export TEST_MINIO_USER="${TEST_MINIO_USER:-${TEST_ADMIN_USER}}"
+export TEST_MINIO_PASSWORD="${TEST_MINIO_PASSWORD:-${TEST_ADMIN_PASSWORD}}"
 
 # Extra headers for gateway routing (set when Matrix is accessed through gateway)
 # Example: TEST_MATRIX_EXTRA_HEADERS="Host: matrix-local.hiclaw.io:9080"

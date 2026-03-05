@@ -4,6 +4,7 @@
 - [Accessing the web UI from other devices on the LAN](#accessing-the-web-ui-from-other-devices-on-the-lan)
 - [Cannot connect to Matrix server locally](#cannot-connect-to-matrix-server-locally)
 - [How to talk to a Worker directly](#how-to-talk-to-a-worker-directly)
+- [How to switch the Manager's model](#how-to-switch-the-managers-model)
 
 ---
 
@@ -70,3 +71,15 @@ After creating a Worker, Manager automatically adds you and the Worker to a shar
 When using Element or similar clients, type `@` followed by the first letter(s) of the Worker's display name to trigger autocomplete and select the right user.
 
 Alternatively, you can click the Worker's avatar and open a **direct message** (DM) conversation. In a DM you don't need to @mention — every message triggers the Worker. Keep in mind that Manager is not in the DM room and won't see any of that conversation.
+
+---
+
+## How to switch the Manager's model
+
+**Single provider**
+
+In the Higress console, configure the `default-ai-route` route to point to your LLM provider. Then tell Manager the exact model name you want to use (e.g. `qwen3.5-plus`). Manager will run a connectivity test with that model name first — if it passes, the switch is applied automatically.
+
+**Multiple providers**
+
+In the Higress console, configure routing rules on `default-ai-route` so that different model name prefixes or regex patterns map to the corresponding provider. After that, the process is the same as the single-provider case — just tell Manager the model name and it handles the rest.

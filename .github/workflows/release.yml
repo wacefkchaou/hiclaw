@@ -14,6 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pull-requests: write
 
     steps:
       - name: Checkout
@@ -82,6 +83,9 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+          BRANCH="chore/archive-changelog-${VERSION}"
+          git checkout -b "${BRANCH}"
+
           # Rename current.md → vX.Y.Z.md
           git mv changelog/current.md "changelog/${VERSION}.md"
 
@@ -97,4 +101,14 @@ jobs:
 
           git add changelog/current.md
           git commit -m "chore: archive changelog for ${VERSION}"
-          git push origin HEAD:main
+          git push origin "${BRANCH}"
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: chore/archive-changelog-${{ github.ref_name }}
+          base: main
+          title: "chore: archive changelog for ${{ github.ref_name }}"
+          body: "Automated PR to archive `changelog/current.md` → `changelog/${{ github.ref_name }}.md` and reset for next release."
+          labels: changelog

@@ -415,6 +415,7 @@ $script:Messages = @{
     # --- Prompt function messages ---
     "prompt.preset" = @{ zh = "  {0} = （已通过环境变量预设）"; en = "  {0} = (pre-set via env)" }
     "prompt.upgrade_keep" = @{ zh = "  {0} = {1}（当前值，回车保留 / 输入新值覆盖）"; en = "  {0} = {1} (current value, press Enter to keep / type new value to change)" }
+    "prompt.upgrade_empty" = @{ zh = "  {0} = （未设置，回车跳过 / 输入新值设置）"; en = "  {0} = (not set, press Enter to skip / type new value to set)" }
     "prompt.default" = @{ zh = "  {0} = {1}（默认）"; en = "  {0} = {1} (default)" }
     "prompt.required" = @{ zh = "{0} 是必需的（在非交互模式下通过环境变量设置）"; en = "{0} is required (set via environment variable in non-interactive mode)" }
     "prompt.required_empty" = @{ zh = "{0} 是必需的"; en = "{0} is required" }
@@ -686,6 +687,23 @@ function Read-Prompt {
         }
         Write-Log (Get-Msg "prompt.preset" -f $VarName)
         return $envValue
+    }
+    # Upgrade mode: optional fields with empty value — let user set a new value
+    elseif ($Optional -and $script:HICLAW_UPGRADE -and -not $script:HICLAW_NON_INTERACTIVE) {
+        Write-Log (Get-Msg "prompt.upgrade_empty" -f $VarName)
+        $prompt = $PromptText
+        if ($Secret) {
+            $newValue = Read-Host -Prompt $prompt -AsSecureString
+            $newValue = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto(
+                [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($newValue)
+            )
+        } else {
+            $newValue = Read-Host -Prompt $prompt
+        }
+        if ($newValue) {
+            return $newValue
+        }
+        return ""
     }
 
     # Non-interactive or quickstart mode

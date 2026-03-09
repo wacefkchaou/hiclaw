@@ -572,6 +572,8 @@ msg() {
         "prompt.upgrade_keep.en") text="  %s = %s (current value, press Enter to keep / type new value to change)" ;;
         "prompt.upgrade_keep_secret.zh") text="  %s = %s（当前值，回车保留 / 输入新值覆盖）" ;;
         "prompt.upgrade_keep_secret.en") text="  %s = %s (current value, press Enter to keep / type new value to change)" ;;
+        "prompt.upgrade_empty.zh") text="  %s = （未设置，回车跳过 / 输入新值设置）" ;;
+        "prompt.upgrade_empty.en") text="  %s = (not set, press Enter to skip / type new value to set)" ;;
         "prompt.default.zh") text="  %s = %s（默认）" ;;
         "prompt.default.en") text="  %s = %s (default)" ;;
         "prompt.required.zh") text="%s 是必需的（在非交互模式下通过环境变量设置）" ;;
@@ -914,6 +916,7 @@ prompt() {
 
 # Prompt for an optional value (empty string is acceptable)
 # Skips prompt if variable is already defined in environment (even if empty)
+# In upgrade mode, shows current value and lets user change it.
 # In non-interactive mode, defaults to empty string.
 prompt_optional() {
     local var_name="$1"
@@ -923,6 +926,39 @@ prompt_optional() {
     # Check if variable is defined (even if set to empty string)
     eval "local _chk=\"\${${var_name}+x}\""
     if [ -n "${_chk}" ]; then
+        # In upgrade mode, show current value and let user change it
+        if [ "${HICLAW_UPGRADE}" = "1" ] && [ "${HICLAW_NON_INTERACTIVE}" != "1" ]; then
+            eval "local current_value=\"\${${var_name}}\""
+            local display_value="${current_value}"
+            if [ "${is_secret}" = "true" ] && [ -n "${current_value}" ]; then
+                local len=${#current_value}
+                if [ "${len}" -le 8 ]; then
+                    display_value="****"
+                else
+                    display_value="${current_value:0:4}****${current_value: -4}"
+                fi
+            fi
+            if [ -n "${current_value}" ]; then
+                if [ "${is_secret}" = "true" ]; then
+                    log "$(msg prompt.upgrade_keep_secret "${var_name}" "${display_value}")"
+                else
+                    log "$(msg prompt.upgrade_keep "${var_name}" "${display_value}")"
+                fi
+            else
+                log "$(msg prompt.upgrade_empty "${var_name}")"
+            fi
+            local new_value=""
+            if [ "${is_secret}" = "true" ]; then
+                read -s -p "${prompt_text}: " new_value
+                echo
+            else
+                read -p "${prompt_text}: " new_value
+            fi
+            if [ -n "${new_value}" ]; then
+                eval "export ${var_name}='${new_value}'"
+            fi
+            return
+        fi
         log "$(msg prompt.preset "${var_name}")"
         return
     fi

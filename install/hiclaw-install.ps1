@@ -252,7 +252,7 @@ $script:Messages = @{
     "llm.provider.selected_codingplan" = @{ zh = "  提供商: 阿里云百炼 CodingPlan"; en = "  Provider: Alibaba Cloud Bailian CodingPlan" }
     "llm.provider.selected_qwen" = @{ zh = "  提供商: 阿里云百炼"; en = "  Provider: Alibaba Cloud Bailian" }
     "llm.provider.selected_openai" = @{ zh = "  提供商: {0}（OpenAI 兼容）"; en = "  Provider: {0} (OpenAI-compatible)" }
-    "llm.provider.invalid" = @{ zh = "无效选择，默认使用阿里云百炼 CodingPlan"; en = "Invalid choice, defaulting to Alibaba Cloud Bailian CodingPlan" }
+    "llm.provider.invalid" = @{ zh = "无效选择: {0}（请输入 1 或 2）"; en = "Invalid choice: {0} (please enter 1 or 2)" }
     "llm.qwen.model_prompt" = @{ zh = "默认模型 ID [qwen3.5-plus]"; en = "Default Model ID [qwen3.5-plus]" }
     "llm.openai.base_url_prompt" = @{ zh = "Base URL（例如 https://api.openai.com/v1）"; en = "Base URL (e.g., https://api.openai.com/v1)" }
     "llm.openai.model_prompt" = @{ zh = "默认模型 ID [gpt-5.4]"; en = "Default Model ID [gpt-5.4]" }
@@ -1423,7 +1423,7 @@ function Install-Manager {
                     Write-Log (Get-Msg "llm.provider.selected_qwen")
                 } else {
                     $config.LLM_PROVIDER = "openai-compat"
-                    $config.OPENAI_BASE_URL = if ($env:HICLAW_OPENAI_BASE_URL) { $env:HICLAW_OPENAI_BASE_URL } else { "https://coding.dashscope.aliyuncs.com/v1" }
+                    $config.OPENAI_BASE_URL = "https://coding.dashscope.aliyuncs.com/v1"
 
                     # Sub-menu: Select CodingPlan model
                     Write-Host ""
@@ -1491,52 +1491,7 @@ function Install-Manager {
                 Test-LlmConnectivity -BaseUrl $config.OPENAI_BASE_URL -ApiKey $config.LLM_API_KEY -Model $config.DEFAULT_MODEL
             }
             default {
-                Write-Log (Get-Msg "llm.provider.invalid")
-                $config.LLM_PROVIDER = "openai-compat"
-                $config.OPENAI_BASE_URL = if ($env:HICLAW_OPENAI_BASE_URL) { $env:HICLAW_OPENAI_BASE_URL } else { "https://coding.dashscope.aliyuncs.com/v1" }
-
-                # Sub-menu: Select CodingPlan model
-                Write-Host ""
-                Write-Host (Get-Msg "llm.codingplan.models_title")
-                Write-Host (Get-Msg "llm.codingplan.model.qwen35plus")
-                Write-Host (Get-Msg "llm.codingplan.model.glm5")
-                Write-Host (Get-Msg "llm.codingplan.model.kimi")
-                Write-Host (Get-Msg "llm.codingplan.model.minimax")
-                Write-Host ""
-
-                if ($script:HICLAW_QUICKSTART) {
-                    $codingPlanModelChoice = Read-Host "$(Get-Msg 'llm.codingplan.model.select') [1]"
-                } else {
-                    $codingPlanModelChoice = Read-Host (Get-Msg "llm.codingplan.model.select")
-                }
-                $codingPlanModelChoice = if ($codingPlanModelChoice) { $codingPlanModelChoice } else { "1" }
-
-                switch -Regex ($codingPlanModelChoice) {
-                    "^(1|qwen3\.5-plus)$" {
-                        $config.DEFAULT_MODEL = "qwen3.5-plus"
-                    }
-                    "^(2|glm-5)$" {
-                        $config.DEFAULT_MODEL = "glm-5"
-                    }
-                    "^(3|kimi-k2\.5)$" {
-                        $config.DEFAULT_MODEL = "kimi-k2.5"
-                    }
-                    "^(4|MiniMax-M2\.5)$" {
-                        $config.DEFAULT_MODEL = "MiniMax-M2.5"
-                    }
-                    default {
-                        $config.DEFAULT_MODEL = "qwen3.5-plus"
-                    }
-                }
-
-                Write-Log (Get-Msg "llm.provider.selected_codingplan")
-                Write-Log (Get-Msg "llm.model.label" -f $config.DEFAULT_MODEL)
-                Write-Log ""
-                Write-Log (Get-Msg "llm.apikey_hint")
-                Write-Log (Get-Msg "llm.apikey_url")
-                Write-Log ""
-                $config.LLM_API_KEY = Read-Prompt -VarName "HICLAW_LLM_API_KEY" -PromptText (Get-Msg "llm.apikey_prompt") -Secret
-                Test-LlmConnectivity -BaseUrl $config.OPENAI_BASE_URL -ApiKey $config.LLM_API_KEY -Model $config.DEFAULT_MODEL -Hint (Get-Msg "llm.openai.test.fail.codingplan")
+                Write-Error (Get-Msg "llm.provider.invalid" -f $providerChoice)
             }
         }
     }

@@ -305,8 +305,8 @@ msg() {
         "llm.provider.selected_qwen.en") text="  Provider: Alibaba Cloud Bailian" ;;
         "llm.provider.selected_openai.zh") text="  提供商: %s（OpenAI 兼容）" ;;
         "llm.provider.selected_openai.en") text="  Provider: %s (OpenAI-compatible)" ;;
-        "llm.provider.invalid.zh") text="无效选择，默认使用阿里云百炼 CodingPlan" ;;
-        "llm.provider.invalid.en") text="Invalid choice, defaulting to Alibaba Cloud Bailian CodingPlan" ;;
+        "llm.provider.invalid.zh") text="无效选择: %s（请输入 1 或 2）" ;;
+        "llm.provider.invalid.en") text="Invalid choice: %s (please enter 1 or 2)" ;;
         "llm.qwen.model_prompt.zh") text="默认模型 ID [qwen3.5-plus]" ;;
         "llm.qwen.model_prompt.en") text="Default Model ID [qwen3.5-plus]" ;;
         "llm.openai.base_url_prompt.zh") text="Base URL（例如 https://api.openai.com/v1）" ;;
@@ -1343,6 +1343,7 @@ install_manager() {
                 case "${ALIBABA_MODEL_CHOICE}" in
                     2|qwen)
                         HICLAW_LLM_PROVIDER="qwen"
+                        HICLAW_OPENAI_BASE_URL=""
                         echo ""
                         read -p "$(msg llm.qwen.model_prompt): " HICLAW_DEFAULT_MODEL
                         HICLAW_DEFAULT_MODEL="${HICLAW_DEFAULT_MODEL:-qwen3.5-plus}"
@@ -1351,7 +1352,7 @@ install_manager() {
                         ;;
                     *)
                         HICLAW_LLM_PROVIDER="openai-compat"
-                        HICLAW_OPENAI_BASE_URL="${HICLAW_OPENAI_BASE_URL:-https://coding.dashscope.aliyuncs.com/v1}"
+                        HICLAW_OPENAI_BASE_URL="https://coding.dashscope.aliyuncs.com/v1"
 
                         # Sub-menu: Select CodingPlan model
                         echo ""
@@ -1417,52 +1418,7 @@ install_manager() {
                 test_llm_connectivity "${HICLAW_OPENAI_BASE_URL}" "${HICLAW_LLM_API_KEY}" "${HICLAW_DEFAULT_MODEL}"
                 ;;
             *)
-                log "$(msg llm.provider.invalid)"
-                HICLAW_LLM_PROVIDER="openai-compat"
-                HICLAW_OPENAI_BASE_URL="${HICLAW_OPENAI_BASE_URL:-https://coding.dashscope.aliyuncs.com/v1}"
-
-                # Sub-menu: Select CodingPlan model
-                echo ""
-                echo "$(msg llm.codingplan.models_title)"
-                echo "$(msg llm.codingplan.model.qwen35plus)"
-                echo "$(msg llm.codingplan.model.glm5)"
-                echo "$(msg llm.codingplan.model.kimi)"
-                echo "$(msg llm.codingplan.model.minimax)"
-                echo ""
-                if [ "${HICLAW_QUICKSTART}" = "1" ]; then
-                    read -p "$(msg llm.codingplan.model.select) [1]: " CODINGPLAN_MODEL_CHOICE
-                    CODINGPLAN_MODEL_CHOICE="${CODINGPLAN_MODEL_CHOICE:-1}"
-                else
-                    read -p "$(msg llm.codingplan.model.select): " CODINGPLAN_MODEL_CHOICE
-                    CODINGPLAN_MODEL_CHOICE="${CODINGPLAN_MODEL_CHOICE:-1}"
-                fi
-
-                case "${CODINGPLAN_MODEL_CHOICE}" in
-                    1|qwen3.5-plus)
-                        HICLAW_DEFAULT_MODEL="qwen3.5-plus"
-                        ;;
-                    2|glm-5)
-                        HICLAW_DEFAULT_MODEL="glm-5"
-                        ;;
-                    3|kimi-k2.5)
-                        HICLAW_DEFAULT_MODEL="kimi-k2.5"
-                        ;;
-                    4|MiniMax-M2.5)
-                        HICLAW_DEFAULT_MODEL="MiniMax-M2.5"
-                        ;;
-                    *)
-                        HICLAW_DEFAULT_MODEL="qwen3.5-plus"
-                        ;;
-                esac
-
-                log "$(msg llm.provider.selected_codingplan)"
-                log "$(msg llm.model.label "${HICLAW_DEFAULT_MODEL}")"
-                log ""
-                log "$(msg llm.apikey_hint)"
-                log "$(msg llm.apikey_url)"
-                log ""
-                prompt HICLAW_LLM_API_KEY "$(msg llm.apikey_prompt)" "" "true"
-                test_llm_connectivity "${HICLAW_OPENAI_BASE_URL}" "${HICLAW_LLM_API_KEY}" "${HICLAW_DEFAULT_MODEL}" "$(msg llm.openai.test.fail.codingplan)"
+                error "$(msg llm.provider.invalid "${PROVIDER_CHOICE}")"
                 ;;
         esac
     fi

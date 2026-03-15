@@ -4,6 +4,7 @@ Record image-affecting changes to `manager/`, `worker/`, `openclaw-base/` here b
 
 ---
 
+- feat(copaw): convert Markdown to HTML in Matrix messages using markdown-it-py (same engine as OpenClaw) with linkify, breaks, strikethrough, and table support
 - feat(manager): add find-worker.sh to consolidate worker availability check (registry + state + lifecycle + SOUL.md) into a single script call
 - fix(manager): lifecycle-worker.sh idle detection now considers infinite tasks — Workers with active infinite tasks are no longer auto-stopped
 - fix(manager): HEARTBEAT.md Steps 5/6 updated to treat infinite tasks as active for idle detection and anomaly checks

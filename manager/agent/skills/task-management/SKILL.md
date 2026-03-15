@@ -35,6 +35,17 @@ Ask admin: enable find-skills (recommended) or disable; optionally provide custo
 
 ---
 
+## Choosing Task Type: Finite vs Infinite
+
+Before creating a task, determine the correct type:
+
+- **Finite** — the task has a clear end state. Once the Worker delivers the result, it's done. Examples: "implement login page", "fix bug #123", "write a report on X", "review this PR".
+- **Infinite** — the task repeats on a schedule with no natural end. The Worker executes it periodically and reports back each time. Examples: "run security scan every day at 9am", "check service health every hour", "sync data from API every Monday".
+
+**Decision rule**: if the admin's request contains a recurring schedule (daily, hourly, every N minutes, cron expression) or implies ongoing monitoring/polling, use infinite. Everything else is finite. When ambiguous, ask the admin to clarify.
+
+---
+
 ## Assigning a Finite Task
 
 1. Generate task ID: `task-YYYYMMDD-HHMMSS`

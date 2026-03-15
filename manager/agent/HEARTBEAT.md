@@ -102,7 +102,7 @@ done
 
 ### 5. Capacity Assessment
 
-- Count the number of `type=finite` entries in state.json (finite tasks in progress) and identify idle Workers with no assigned tasks
+- Count the number of `type=finite` entries in state.json (finite tasks in progress) and identify idle Workers with no assigned tasks (neither finite nor infinite)
 - If Workers are insufficient, check in with the human admin about whether new Workers need to be created
 - If Workers are idle, suggest reassigning tasks
 
@@ -123,7 +123,7 @@ If the output is `available`, proceed with the following steps:
    bash /opt/hiclaw/agent/skills/worker-management/scripts/lifecycle-worker.sh --action sync-status
    ```
 
-2. Detect idle Workers: For each Worker, if there are no finite tasks for them in state.json and container_status=running:
+2. Detect idle Workers: For each Worker, if there are no active tasks (neither finite nor infinite) for them in state.json and container_status=running:
    - If idle_since is not set, set it to the current time
    - If (now - idle_since) > idle_timeout_minutes, perform auto-stop:
      ```bash
@@ -135,7 +135,7 @@ If the output is `available`, proceed with the following steps:
      message: Worker <name> container has been automatically paused due to idle timeout. It will be automatically resumed when a task is assigned.
      ```
 
-3. If a Worker has a running finite task but its container status is `stopped` or `not_found` (anomaly), start/recreate it and send an alert to the admin (see Step 7):
+3. If a Worker has an active task (finite or infinite) but its container status is `stopped` or `not_found` (anomaly), start/recreate it and send an alert to the admin (see Step 7):
    ```bash
    bash /opt/hiclaw/agent/skills/worker-management/scripts/lifecycle-worker.sh --action start --worker <name>
    ```

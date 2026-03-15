@@ -71,7 +71,8 @@ Default runtime is set by `HICLAW_DEFAULT_WORKER_RUNTIME` (chosen during install
 Assign, track, and complete tasks for Workers.
 
 - Admin gives a task and no Worker is specified → Worker availability check (Step 0)
-- Assigning a finite or infinite task to a Worker → create task directory, write `meta.json` + `spec.md`, notify Worker
+- Assigning a finite task to a Worker → create task directory, write `meta.json` (type=finite) + `spec.md`, notify Worker
+- Admin says "run a security scan every day at 9am" or any request with a recurring schedule → create an **infinite** task with `meta.json` (type=infinite, schedule, timezone) + `spec.md`, notify Worker. Heartbeat will trigger execution on schedule.
 - Worker @mentions you with completion → update `meta.json`, run `manage-state.sh --action complete`, log to memory
 
 ## task-coordination

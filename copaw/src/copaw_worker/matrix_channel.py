@@ -406,6 +406,30 @@ class MatrixChannel(BaseChannel):
             except Exception as exc:
                 logger.warning("MatrixChannel: failed to save sync token: %s", exc)
 
+    async def _e2ee_maintenance(self) -> None:
+        """Perform E2EE key maintenance tasks after each sync.
+
+        Mirrors what nio's sync_forever() does between syncs:
+        - Upload device keys when needed
+        - Query device keys for new/changed users
+        - Claim one-time keys to establish Olm sessions
+        - Send outgoing to-device messages (key shares, key requests)
+        """
+        if not self._cfg.encryption or not self._client or not self._client.olm:
+            return
+        try:
+            if self._client.should_upload_keys:
+                await self._client.keys_upload()
+            if self._client.should_query_keys:
+                await self._client.keys_query()
+            if self._client.should_claim_keys:
+                await self._client.keys_claim(
+                    self._client.get_users_for_key_claiming()
+                )
+            await self._client.send_to_device_messages()
+        except Exception as exc:
+            logger.warning("MatrixChannel: E2EE maintenance error: %s", exc)
+
     async def _sync_loop(self) -> None:
         next_batch: Optional[str] = self._load_sync_token()
 
@@ -413,10 +437,19 @@ class MatrixChannel(BaseChannel):
         # do an initial sync with callbacks suppressed — only capture next_batch
         # so subsequent syncs are incremental.  This prevents replaying old
         # messages when the token file doesn't exist yet.
+        #
+        # To truly suppress callbacks, temporarily remove event callbacks
+        # before the sync and restore them after, because nio's sync()
+        # internally calls receive_response() which fires callbacks.
         if next_batch is None:
             logger.info("MatrixChannel: no sync token found, performing catch-up sync (messages suppressed)")
             try:
-                resp = await self._client.sync(timeout=30000, full_state=True)
+                saved_cbs = self._client.event_callbacks[:]
+                self._client.event_callbacks.clear()
+                try:
+                    resp = await self._client.sync(timeout=30000, full_state=True)
+                finally:
+                    self._client.event_callbacks.extend(saved_cbs)
                 if isinstance(resp, SyncResponse):
                     next_batch = resp.next_batch
                     self._save_sync_token(next_batch)
@@ -424,6 +457,7 @@ class MatrixChannel(BaseChannel):
                     for room_id in resp.rooms.invite:
                         logger.info("MatrixChannel: auto-joining %s", room_id)
                         await self._client.join(room_id)
+                    await self._e2ee_maintenance()
                     logger.info("MatrixChannel: catch-up sync done, will process messages from next sync")
                 else:
                     logger.warning("MatrixChannel: catch-up sync error: %s", resp)
@@ -445,6 +479,7 @@ class MatrixChannel(BaseChannel):
                     for room_id in resp.rooms.invite:
                         logger.info("MatrixChannel: auto-joining %s", room_id)
                         await self._client.join(room_id)
+                    await self._e2ee_maintenance()
                 else:
                     logger.warning("MatrixChannel: full-state sync error: %s", resp)
             except Exception as exc:
@@ -464,12 +499,8 @@ class MatrixChannel(BaseChannel):
                     for room_id in resp.rooms.invite:
                         logger.info("MatrixChannel: auto-joining %s", room_id)
                         await self._client.join(room_id)
-                    # E2EE: upload keys and query device keys as needed
-                    if self._cfg.encryption and self._client.olm:
-                        if self._client.should_upload_keys:
-                            await self._client.keys_upload()
-                        if self._client.should_query_keys:
-                            await self._client.keys_query()
+                    # E2EE: full key maintenance (upload, query, claim, to-device)
+                    await self._e2ee_maintenance()
                 else:
                     logger.warning("MatrixChannel: sync error: %s", resp)
                     await asyncio.sleep(5)
@@ -565,6 +596,9 @@ class MatrixChannel(BaseChannel):
                     rf"^{re.escape(display_name)}\s*:?\s*", "", text, flags=re.IGNORECASE,
                 )
                 if result != text:
+                    # Clean leftover decoration (e.g. emoji suffix) between
+                    # the display name and the actual message content.
+                    result = re.sub(r"^[^\w/]+", "", result)
                     return result.strip()
         # 3. Strip localpart (e.g. "math") at start — only if display name
         #    didn't match.
@@ -609,10 +643,20 @@ class MatrixChannel(BaseChannel):
                     try:
                         name = client_room.user_name(user_id)
                         if name:
+                            logger.debug(
+                                "display_name resolved via client.rooms fallback: %s -> %r",
+                                user_id, name,
+                            )
                             return name
                     except Exception:
                         pass
         # 3. Fallback: localpart of MXID (e.g. "@alice:hs" → "alice")
+        logger.debug(
+            "display_name fallback to localpart for %s (room.users=%d, client_rooms=%d)",
+            user_id,
+            len(getattr(room, "users", {})),
+            len(self._client.rooms) if self._client else 0,
+        )
         return user_id.split(":")[0].lstrip("@") or user_id
 
     def _record_history(self, room_id: str, entry: HistoryEntry) -> None:
@@ -970,6 +1014,10 @@ class MatrixChannel(BaseChannel):
     # ------------------------------------------------------------------
 
     async def _on_room_event(self, room: MatrixRoom, event: RoomMessageText) -> None:
+        logger.debug(
+            "_on_room_event: sender=%s body=%r room_users=%d",
+            event.sender, (event.body or "")[:80], len(getattr(room, 'users', {})),
+        )
         # Skip own messages
         if event.sender == self._user_id:
             return
